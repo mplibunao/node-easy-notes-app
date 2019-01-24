@@ -25,7 +25,7 @@ exports.create = (req, res) => {
     const user = new User({
         firstName: req.body.firstName, 
         lastName: req.body.lastName,
-	phoneNumber: req.body.phoneNumber
+	    phoneNumber: req.body.phoneNumber
     });
 
     // Save Note in the database
@@ -53,7 +53,7 @@ exports.findAll = (req, res) => {
 
 // Retrieve and return all notes from the database.
 exports.findUsernotes = (req, res) => {
-    Note.findAll({userId: req.params.userId})
+    Note.where({userId: req.params.userId})
     .then(notes => {
         res.send(notes);
     }).catch(err => {
