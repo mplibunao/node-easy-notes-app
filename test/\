@@ -1,0 +1,130 @@
+process.env.NODE_ENV = 'test';
+
+var chai = require('chai');
+var chaiHttp = require('chai-http');
+
+var server = require('../server.js');
+var Product = require('../app/models/product.model.js');
+var Category = require('../app/models/category.model.js');
+
+var should = chai.should();
+
+chai.use(chaiHttp);
+
+describe('Products', () => {
+
+  Product.collection.drop();
+
+  beforeEach(done => {
+    var newCategory = new Category({
+      name: 'Health',
+    });
+    newCategory.save()
+      .then(data => {
+        var newProduct = new Product({
+          name: 'keyboard',
+          categoryId: data.id,
+          description: 'fuck you',
+          price: 'P100.00'
+        });
+        newProduct.save()
+          .then(() => done())
+          .catch(err => console.log('err', err))
+      })
+      .catch(err => console.log('err ', err));
+  })
+
+  afterEach(done => {
+    Category.collection.drop();
+    done();
+  });
+
+  it('should list ALL products on /products GET', done => {
+    chai.request(server)
+      .get('/products')
+      .end((err, res) => {
+        res.should.have.status(200);
+        res.should.be.json;
+        res.body.should.be.a('array');
+        res.body[0].should.have.property('_id');
+        res.body[0].should.have.property('categoryId');
+        res.body[0].should.have.property('description');
+        res.body[0].should.have.property('price');
+        res.body[0].description.should.equal('fuck you');
+        res.body[0].price.should.equal('P100.00');
+        done();
+      });
+  });
+
+  it('should add a SINGLE product on /products POST', function (done) {
+    const newCategory = new Category({
+      name: 'Gaming',
+    });
+    newCategory.save((err, data) => {
+      chai.request(server)
+        .post('/products')
+        .send({
+          'name': 'mouse',
+          'categoryId': data.id,
+          'description': 'best gaming mouse',
+          'price': 'P999'
+        })
+        .end((err, res) => {
+          res.should.have.status(200);
+          res.should.be.json;
+          res.body.should.be.a('object');
+          res.body.should.have.property('_id');
+          res.body.should.have.property('name');
+          res.body.should.have.property('categoryId');
+          res.body.should.have.property('description');
+          res.body.should.have.property('price');
+          res.body.name.should.equal('mouse');
+          res.body.categoryId.should.equal(data.id);
+          res.body.description.should.equal('best gaming mouse');
+          res.body.price.should.equal('P999');
+          done();
+        });
+    });
+  });
+
+  it('should list a SINGLE product on /products/:productId GET', done => {
+    const newCategory = new Category({
+      name: 'Chill',
+    });
+    newCategory.save()
+      .then(data => {
+        const newProduct = new Product({
+          name: "Lighter",
+          categoryId: data._id,
+          description: 'even burn',
+          price: 'P999'
+        });
+        newProduct.save()
+          .then(productData => {
+            console.log('productData ->', productData)
+            chai.request(server)
+              .put(`/products/${productData._id}`)
+              .send({
+                'description': 'nice for smoking',
+              })
+              .end((err, res) => {
+                // res.should.have.status(200);
+                // res.should.be.json;
+                res.body.should.be.a('object');
+                res.body.should.have.property('_id');
+                res.body.should.have.property('categoryId');
+                res.body.should.have.property('description');
+                res.body.should.have.property('price');
+                res.body.description.should.equal('nice for smoking');
+                res.body.price.should.equal('P999');
+              })
+          })
+          .catch(err => {
+            console.log('err', err);
+          });
+      })
+      .catch(err => {
+        console.log('err', err);
+      });
+  })
+});
